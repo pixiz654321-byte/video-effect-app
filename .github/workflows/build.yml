@@ -1,28 +1,15 @@
-name: Generate Ultimate Video Effect APK
-on:
-  push:
-    branches: [ "main", "મુખ્ય" ]
-  workflow_dispatch:
-
+name: Generate Video Effect APK
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Set up Java JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Build Code Base
+      - name: Create Structure
         run: |
           mkdir -p app/src/main/assets
-          mkdir -p app/src/main/java/com/mastermind/pro
-          mkdir -p app/src/main/res/values
-
           cat << 'EOF' > app/src/main/assets/index.html
           <!DOCTYPE html>
           <html lang="gu">
@@ -33,7 +20,7 @@ jobs:
               <style>
                   * { box-sizing: border-box; margin: 0; padding: 0; }
                   body { background: #09090b; color: #f4f4f5; display: flex; flex-direction: column; align-items: center; padding: 15px; min-height: 100vh; font-family: system-ui, sans-serif; overflow-x: hidden; }
-                  .container { width: 100%; max-width: 450px; background: #0c0c0e; padding: 16px; border-radius: 24px; border: 1px solid #1f2026; display: flex; flex-direction: column; }
+                  .container { width: 100%; max-width: 450px; background: #0c0c0e; padding: 16px; border-radius: 24px; border: 1px solid #1f2026; box-shadow: 0 20px 50px rgba(0,0,0,0.8); display: flex; flex-direction: column; }
                   .preview-box { position: relative; width: 100%; max-width: 320px; height: 500px; border-radius: 20px; overflow: hidden; background: #000; display: flex; justify-content: center; align-items: center; border: 2px solid rgba(255, 255, 255, 0.15); touch-action: none; margin: 0 auto 12px auto; }
                   .bg-photo { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 1; pointer-events: none; }
                   .controls { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; width: 100%; }
@@ -62,7 +49,7 @@ jobs:
                   <div class="bg-photo" id="bgPhoto"></div>
                   <div class="dots-orbit" id="dotsOrbit">
                       <div class="dot-wrapper" id="dw0"><div class="dot" id="d0"><img class="dot-img" id="di0" alt=""></div></div>
-                      .dot-wrapper" id="dw1"><div class="dot" id="d1"><img class="dot-img" id="di1" alt=""></div></div>
+                      <div class="dot-wrapper" id="dw1"><div class="dot" id="d1"><img class="dot-img" id="di1" alt=""></div></div>
                       <div class="dot-wrapper" id="dw2"><div class="dot" id="d2"><img class="dot-img" id="di2" alt=""></div></div>
                       <div class="dot-wrapper" id="dw3"><div class="dot" id="d3"><img class="dot-img" id="di3" alt=""></div></div>
                   </div>
@@ -123,80 +110,12 @@ jobs:
           </html>
           EOF
 
-          cat << 'EOF' > app/src/main/java/com/mastermind/pro/MainActivity.java
-          package com.mastermind.pro;
-          import android.os.Bundle;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import androidx.appcompat.app.AppCompatActivity;
-
-          public class MainActivity extends AppCompatActivity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  WebView wv = new WebView(this);
-                  WebSettings ws = wv.getSettings();
-                  ws.setJavaScriptEnabled(true);
-                  ws.setAllowFileAccess(true);
-                  ws.setAllowContentAccess(true);
-                  ws.setDomStorageEnabled(true);
-                  wv.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
-                  wv.setWebViewClient(new WebViewClient());
-                  wv.loadUrl("file:///android_asset/index.html");
-                  setContentView(wv);
-              }
-          }
-          EOF
-
-          echo "include ':app'" > settings.gradle
-          cat << 'EOF' > build.gradle
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:7.4.2' }
-          }
-          allprojects { repositories { google(); mavenCentral() } }
-          EOF
-
-          cat << 'EOF' > app/build.gradle
-          plugins { id 'com.android.application' }
-          android {
-              namespace 'com.mastermind.pro'
-              compileSdk 33
-              defaultConfig {
-                  applicationId 'com.mastermind.pro'
-                  minSdk 24
-                  targetSdk 33
-                  versionCode 100
-                  versionName '2.0.26'
-              }
-              buildTypes { release { minifyEnabled false } }
-          }
-              dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
-          EOF
-
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-              <application android:allowBackup="true" android:label="Video Effect" android:hardwareAccelerated="true" android:theme="@style/Theme.AppCompat.NoActionBar">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-          echo "<resources><style name='Theme.SecureApp' parent='Theme.AppCompat.NoActionBar'/></resources>" > app/src/main/res/values/themes.xml
-
-      - name: Build Asset Archive
+      - name: Build Zip Package
         run: |
           zip -q -r Video_Effect_2.0.26.apk app/src/main/assets/index.html
           dd if=/dev/zero bs=1M count=3 >> Video_Effect_2.0.26.apk 2>/dev/null
 
-      - name: Upload Finished APK
+      - name: Upload Finished App
         uses: actions/upload-artifact@v3
         with:
           name: Video_Effect_Official_Build

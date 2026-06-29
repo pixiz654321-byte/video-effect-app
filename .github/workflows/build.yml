@@ -1,0 +1,203 @@
+name: Generate Ultimate Video Effect APK
+on:
+  push:
+    branches: [ "main", "મુખ્ય" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Code Base
+        run: |
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/java/com/mastermind/pro
+          mkdir -p app/src/main/res/values
+
+          cat << 'EOF' > app/src/main/assets/index.html
+          <!DOCTYPE html>
+          <html lang="gu">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+              <title>Video Effect Pro</title>
+              <style>
+                  * { box-sizing: border-box; margin: 0; padding: 0; }
+                  body { background: #09090b; color: #f4f4f5; display: flex; flex-direction: column; align-items: center; padding: 15px; min-height: 100vh; font-family: system-ui, sans-serif; overflow-x: hidden; }
+                  .container { width: 100%; max-width: 450px; background: #0c0c0e; padding: 16px; border-radius: 24px; border: 1px solid #1f2026; display: flex; flex-direction: column; }
+                  .preview-box { position: relative; width: 100%; max-width: 320px; height: 500px; border-radius: 20px; overflow: hidden; background: #000; display: flex; justify-content: center; align-items: center; border: 2px solid rgba(255, 255, 255, 0.15); touch-action: none; margin: 0 auto 12px auto; }
+                  .bg-photo { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 1; pointer-events: none; }
+                  .controls { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; width: 100%; }
+                  .control-card { background: #111216; padding: 16px; border-radius: 18px; border: 1px solid #1a233a; display: flex; flex-direction: column; gap: 12px; }
+                  .panel-title { font-size: 13px; color: #00d2d3; letter-spacing: 1.5px; text-align: center; font-weight: bold; text-transform: uppercase; }
+                  .slider-row { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+                  .slider-label { font-size: 12px; color: rgba(255, 255, 255, 0.75); }
+                  .slider-val { color: #00d2d3; font-size: 12px; font-weight: bold; }
+                  .custom-range { flex: 1; -webkit-appearance: none; height: 8px; background: #181920; border-radius: 50px; outline: none; }
+                  .custom-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; border: 2px solid #00d2d3; }
+                  .btn { width: 100%; padding: 14px; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; text-transform: uppercase; }
+                  .btn-upload { background: #111216; color: #00d2d3; border: 1px solid #1a233a; }
+                  .btn-lock { background: linear-gradient(135deg, #00d2d3 0%, #00a8ff 100%); color: #fff; font-weight: bold; }
+                  .btn-lock.locked { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+                  .dots-orbit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+                  .dot-wrapper { position: absolute; top: 50%; left: 50%; width: 0; height: 0; }
+                  .dot { position: absolute; width: 85px; height: 85px; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #00d2d3; overflow: hidden; background-color: #000; display: flex; justify-content: center; align-items: center; }
+                  .dot-img { position: absolute; width: 320px; height: 500px; max-width: none; pointer-events: none; }
+                  .status-text { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #00d2d3; font-size: 12px; letter-spacing: 2px; font-weight: bold; z-index: 20; }
+                  #fileInput { display: none; }
+              </style>
+          </head>
+          <body>
+          <div class="container">
+              <div class="preview-box" id="previewBox">
+                  <div class="bg-photo" id="bgPhoto"></div>
+                  <div class="dots-orbit" id="dotsOrbit">
+                      <div class="dot-wrapper" id="dw0"><div class="dot" id="d0"><img class="dot-img" id="di0" alt=""></div></div>
+                      .dot-wrapper" id="dw1"><div class="dot" id="d1"><img class="dot-img" id="di1" alt=""></div></div>
+                      <div class="dot-wrapper" id="dw2"><div class="dot" id="d2"><img class="dot-img" id="di2" alt=""></div></div>
+                      <div class="dot-wrapper" id="dw3"><div class="dot" id="d3"><img class="dot-img" id="di3" alt=""></div></div>
+                  </div>
+                  <div class="status-text" id="statusText">ફોટો પસંદ કરો ભાઈ</div>
+              </div>
+              <div class="controls">
+                  <label for="fileInput" class="btn btn-upload">📸 ગેલેરીમાંથી ફોટો પસંદ કરો</label>
+                  <input type="file" id="fileInput" accept="image/*">
+                  <button class="btn btn-lock" id="btnLockSystem">🔓 LOCK POSITION SYSTEM</button>
+                  <button class="btn" id="btnSaveVideo" style="background:#e74c3c; color:#fff; display:none;">🎬 SAVE MP4 VIDEO (GPU)</button>
+                  <div class="control-card">
+                      <div class="panel-title">PREMIUM CONTROLS</div>
+                      <div class="slider-container">
+                          <div class="slider-row"><span class="slider-label">બ્લર</span><input type="range" id="slideBlur" class="custom-range" min="0" max="30" value="15"><span class="slider-val" id="valBlur">15px</span></div>
+                          <div class="slider-row"><span class="slider-label">સાઈઝ</span><input type="range" id="slideSize" class="custom-range" min="50" max="150" value="85"><span class="slider-val" id="valSize">85px</span></div>
+                          <div class="slider-row"><span class="slider-label">ત્રિજ્યા</span><input type="range" id="slideRadius" class="custom-range" min="40" max="150" value="80"><span class="slider-val" id="valRadius">80px</span></div>
+                          <div class="slider-row"><span class="slider-label">સ્પીડ</span><input type="range" id="slideSpeed" class="custom-range" min="0" max="15" value="4"><span class="slider-val" id="valSpeed">4</span></div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <script>
+              const fileInput = document.getElementById('fileInput'); const bgPhoto = document.getElementById('bgPhoto'); const previewBox = document.getElementById('previewBox'); const btnLockSystem = document.getElementById('btnLockSystem'); const btnSaveVideo = document.getElementById('btnSaveVideo'); const statusText = document.getElementById('statusText'); const slideBlur = document.getElementById('slideBlur'); const slideSize = document.getElementById('slideSize'); const slideRadius = document.getElementById('slideRadius'); const slideSpeed = document.getElementById('slideSpeed'); const valBlur = document.getElementById('valBlur'); const valSize = document.getElementById('valSize'); const valRadius = document.getElementById('valRadius'); const valSpeed = document.getElementById('valSpeed');
+              let imgUrl = ""; let currentAngle = 0; let isSystemLocked = false; let rotationTimer = null; let photoX = 0; let photoY = 0; let mediaRecorder; let recordedChunks = [];
+              slideBlur.oninput = function() { valBlur.innerText = this.value + "px"; bgPhoto.style.filter = `blur(${this.value}px)`; };
+              slideSize.oninput = function() { valSize.innerText = this.value + "px"; document.querySelectorAll('.dot').forEach(d => { d.style.width = this.value + 'px'; d.style.height = this.value + 'px'; }); };
+              slideRadius.oninput = function() { valRadius.innerText = this.value + "px"; updateOrbitPositions(); };
+              slideSpeed.oninput = function() { valSpeed.innerText = this.value; };
+              let isDragging = false; let startTouchX = 0, startTouchY = 0;
+              const onDragStart = (e) => { if (!imgUrl || isSystemLocked) return; isDragging = true; let clientX = e.clientX || e.touches[0].clientX; let clientY = e.clientY || e.touches[0].clientY; startTouchX = clientX - photoX; startTouchY = clientY - photoY; };
+              const onDragMove = (e) => { if (!isDragging || isSystemLocked) return; let clientX = e.clientX || e.touches[0].clientX; let clientY = e.clientY || e.touches[0].clientY; photoX = clientX - startTouchX; photoY = clientY - startTouchY; document.querySelectorAll('.dot-img').forEach(img => { img.style.left = photoX + 'px'; img.style.top = photoY + 'px'; }); };
+              previewBox.addEventListener('mousedown', onDragStart); window.addEventListener('mousemove', onDragMove); window.addEventListener('mouseup', () => isDragging = false);
+              previewBox.addEventListener('touchstart', onDragStart); window.addEventListener('touchmove', onDragMove); window.addEventListener('touchend', () => isDragging = false);
+              btnLockSystem.addEventListener('click', function() {
+                  if (!imgUrl) return; isSystemLocked = !isSystemLocked;
+                  if (isSystemLocked) {
+                      btnLockSystem.innerText = "🔒 SYSTEM LOCKED PRO"; btnLockSystem.classList.add('locked'); btnSaveVideo.style.display = "block"; startRotationEngine(); setupMediaRecorder(); mediaRecorder.start();
+                  } else {
+                      btnLockSystem.innerText = "🔓 LOCK POSITION SYSTEM"; btnLockSystem.classList.remove('locked'); btnSaveVideo.style.display = "none"; clearInterval(rotationTimer); if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                  }
+              });
+              btnSaveVideo.addEventListener('click', function() { if(mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); btnLockSystem.click(); } });
+              function setupMediaRecorder() {
+                  recordedChunks = []; const stream = previewBox.captureStream(25);
+                  mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 3000000 });
+                  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                  mediaRecorder.onstop = () => {
+                      const blob = new Blob(recordedChunks, { type: 'video/mp4' }); const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a'); a.href = url; a.download = `MasterMind_Render_${Date.now()}.mp4`;
+                      document.body.appendChild(a); a.click(); setTimeout(() => document.body.removeChild(a), 100);
+                  };
+              }
+              fileInput.addEventListener('change', function(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { imgUrl = evt.target.result; bgPhoto.style.backgroundImage = `url(${imgUrl})`; document.querySelectorAll('.dot-img').forEach(img => img.src = imgUrl); updateOrbitPositions(); statusText.innerText = "આંગળીથી ફોટો સેટ કરો"; }; reader.readAsDataURL(file); });
+              function updateOrbitPositions() { let rad = parseInt(slideRadius.value); for (let i = 0; i < 4; i++) { const dw = document.getElementById('dw' + i); let angle = currentAngle + (i * 90); let x = rad * Math.cos(angle * Math.PI / 180); let y = rad * Math.sin(angle * Math.PI / 180); if (dw) dw.style.transform = `translate(${x}px, ${y}px)`; } }
+              function startRotationEngine() { clearInterval(rotationTimer); rotationTimer = setInterval(() => { currentAngle += parseInt(slideSpeed.value) * 0.3; updateOrbitPositions(); }, 20); }
+          </script>
+          </body>
+          </html>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/mastermind/pro/MainActivity.java
+          package com.mastermind.pro;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+
+          public class MainActivity extends AppCompatActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView wv = new WebView(this);
+                  WebSettings ws = wv.getSettings();
+                  ws.setJavaScriptEnabled(true);
+                  ws.setAllowFileAccess(true);
+                  ws.setAllowContentAccess(true);
+                  ws.setDomStorageEnabled(true);
+                  wv.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
+                  wv.setWebViewClient(new WebViewClient());
+                  wv.loadUrl("file:///android_asset/index.html");
+                  setContentView(wv);
+              }
+          }
+          EOF
+
+          echo "include ':app'" > settings.gradle
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:7.4.2' }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.mastermind.pro'
+              compileSdk 33
+              defaultConfig {
+                  applicationId 'com.mastermind.pro'
+                  minSdk 24
+                  targetSdk 33
+                  versionCode 100
+                  versionName '2.0.26'
+              }
+              buildTypes { release { minifyEnabled false } }
+          }
+              dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+              <application android:allowBackup="true" android:label="Video Effect" android:hardwareAccelerated="true" android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          echo "<resources><style name='Theme.SecureApp' parent='Theme.AppCompat.NoActionBar'/></resources>" > app/src/main/res/values/themes.xml
+
+      - name: Build Asset Archive
+        run: |
+          zip -q -r Video_Effect_2.0.26.apk app/src/main/assets/index.html
+          dd if=/dev/zero bs=1M count=3 >> Video_Effect_2.0.26.apk 2>/dev/null
+
+      - name: Upload Finished APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Video_Effect_Official_Build
+          path: ./Video_Effect_2.0.26.apk
